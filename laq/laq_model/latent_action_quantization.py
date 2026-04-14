@@ -125,6 +125,8 @@ class LatentActionQuantization(nn.Module):
             ),
         )
 
+        self.to(device)
+
     def state_dict(self, *args, **kwargs):
         return super().state_dict(*args, **kwargs)
 
