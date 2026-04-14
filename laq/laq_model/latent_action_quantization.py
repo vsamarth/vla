@@ -100,7 +100,7 @@ class LatentActionQuantization(nn.Module):
             depth=spatial_depth, **transformer_kwargs
         )
         self.enc_temporal_transformer = Transformer(
-            depth=temporal_depth, **transformer_kwargs
+            depth=spatial_depth, **transformer_kwargs
         )
 
         self.vq = NSVQ(
