@@ -47,7 +47,9 @@ def main():
         ]
     )
 
-    video_tensor = torch.stack([transform(f) for f in frames]).unsqueeze(0)
+    video_tensor = (
+        torch.stack([transform(f) for f in frames]).unsqueeze(0).permute(0, 2, 1, 3, 4)
+    )
     print(f"Video tensor shape: {video_tensor.shape}")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
