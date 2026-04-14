@@ -1,7 +1,7 @@
 import torch
 import requests
 from PIL import Image
-from transformers import AutoProcessor, AutoModelForVision2Seq
+from transformers import AutoProcessor, AutoModelForConditionalGeneration
 
 def main():
     model_id = "google/gemma-4-e4b-it"
@@ -9,11 +9,10 @@ def main():
     print(f"Using device: {device}")
 
     # 1. Load Processor and Model
-    # Note: Using AutoModelForVision2Seq for multimodal Gemma 4
     processor = AutoProcessor.from_pretrained(model_id)
-    model = AutoModelForVision2Seq.from_pretrained(
+    model = AutoModelForConditionalGeneration.from_pretrained(
         model_id,
-        torch_dtype="auto",
+        torch_dtype=torch.bfloat16 if device == "cuda" else torch.float32,
         device_map=device
     )
 
