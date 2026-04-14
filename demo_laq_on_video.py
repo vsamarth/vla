@@ -1,11 +1,13 @@
 import os
 import random
 import json
+import time
 import torch
 import numpy as np
 from PIL import Image
 from pathlib import Path
 import torchvision.transforms as T
+from tqdm import tqdm
 
 from laq.laq_model import LatentActionQuantization
 
@@ -24,12 +26,24 @@ def load_video_frames(video_dir, frame_indices):
 
 
 def main():
+    print("\n" + "=" * 60)
+    print("LAQ Video Inference Script")
+    print("=" * 60)
+
     LAQ_CHECKPOINT = "laq_checkpoints/laq_openx.pt"
     FRAME_STEP = 5
 
     video_dirs = list(Path("data/sthv2_subset").iterdir())
+    if not video_dirs:
+        print("Error: No video directories found in data/sthv2_subset/")
+        return
+
     video_dir = random.choice(video_dirs)
-    print(f"Selected video: {video_dir.name}")
+    print(f"\nSelected video: {video_dir.name}")
+
+    frame_indices = list(range(0, 40, FRAME_STEP))
+    print(f"Frame indices: {frame_indices[: len(frame_indices)]}")
+    print(f"Number of frames to process: {len(frame_indices)}")
 
     frame_indices = list(range(0, 40, FRAME_STEP))
     frames = load_video_frames(video_dir, frame_indices)
@@ -50,8 +64,13 @@ def main():
     video_tensor = (
         torch.stack([transform(f) for f in frames]).unsqueeze(0).permute(0, 2, 1, 3, 4)
     )
-    print(f"Video tensor shape: {video_tensor.shape}")
+    print(
+        f"Video tensor shape: {video_tensor.shape} (batch, channels, frames, height, width)"
+    )
+    print(f"Frame size: {frames[0].size}")
+    print(f"Device: {device}")
 
+    print(f"\nLoading LAQ model from: {LAQ_CHECKPOINT}")
     device = "cuda" if torch.cuda.is_available() else "cpu"
     laq = LatentActionQuantization(
         dim=1024,
@@ -66,16 +85,24 @@ def main():
         code_seq_len=4,
         device=device,
     )
+    print("Loading model weights...")
     laq.load(LAQ_CHECKPOINT)
     laq.eval()
+    print("Model loaded successfully and set to eval mode")
 
     output_dir = Path("output") / video_dir.name
     output_dir.mkdir(parents=True, exist_ok=True)
 
     laq_codes = {}
 
+    total_frames = len(frames) - 1
+    print(f"\nProcessing {total_frames} frame pairs...")
+    print("=" * 60)
+
+    start_time = time.time()
+
     with torch.no_grad():
-        for i in range(len(frames) - 1):
+        for i in tqdm(range(total_frames), desc="Processing frames"):
             first_idx = frame_indices[i]
             second_idx = frame_indices[i + 1]
 
@@ -90,12 +117,18 @@ def main():
             )
             recon_img.save(output_dir / f"decoded_frame_{second_idx:05d}.jpg")
 
-            print(f"Pair ({first_idx}, {second_idx}): code={indices.cpu().tolist()}")
+    elapsed_time = time.time() - start_time
+    print("\n" + "=" * 60)
+    print(f"Processing complete! Total time: {elapsed_time:.2f}s")
+    print(f"Average time per frame: {elapsed_time / total_frames:.2f}s")
+    print(f"Results saved to: {output_dir}")
 
     with open(output_dir / "laq_codes.json", "w") as f:
         json.dump(laq_codes, f, indent=2)
 
-    print(f"\nResults saved to {output_dir}")
+    print("\n" + "=" * 60)
+    print("Done!")
+    print("=" * 60)
 
 
 if __name__ == "__main__":
