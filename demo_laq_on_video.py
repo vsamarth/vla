@@ -45,7 +45,6 @@ def main():
     print(f"Frame indices: {frame_indices[: len(frame_indices)]}")
     print(f"Number of frames to process: {len(frame_indices)}")
 
-    frame_indices = list(range(0, 40, FRAME_STEP))
     frames = load_video_frames(video_dir, frame_indices)
 
     if len(frames) < 2:
@@ -68,10 +67,16 @@ def main():
         f"Video tensor shape: {video_tensor.shape} (batch, channels, frames, height, width)"
     )
     print(f"Frame size: {frames[0].size}")
-    print(f"Device: {device}")
 
     print(f"\nLoading LAQ model from: {LAQ_CHECKPOINT}")
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
+    print(f"Using device: {device}")
+
     laq = LatentActionQuantization(
         dim=1024,
         quant_dim=32,
@@ -90,7 +95,7 @@ def main():
     laq.eval()
     print("Model loaded successfully and set to eval mode")
 
-output_dir = Path("output") / video_dir.name
+    output_dir = Path("output") / video_dir.name
     output_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"\nSaving input frames to output directory...")
