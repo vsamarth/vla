@@ -12,6 +12,12 @@ dependencies = [
     "transformers>=5.5.4",
     "pillow>=12.2.0",
     "requests>=2.33.1",
+    "einops",
+    "tqdm",
+    "wandb",
+    "beartype",
+    "ema-pytorch",
+    "numpy",
 ]
 
 [[tool.uv.index]]
