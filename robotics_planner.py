@@ -1,18 +1,31 @@
 import torch
 import requests
 from PIL import Image
-from transformers import AutoProcessor, AutoModelForConditionalGeneration
+from transformers import AutoProcessor, AutoModelForImageTextToText
 
 def main():
-    model_id = "google/gemma-4-e4b-it"
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    # Using SmolVLM-256M: Ultra-fast multimodal model under 500M params
+    model_id = "HuggingFaceTB/SmolVLM-256M-Instruct"
+    
+    # Detect device: CUDA for NVIDIA, MPS for Mac GPU, else CPU
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
+        
     print(f"Using device: {device}")
 
     # 1. Load Processor and Model
     processor = AutoProcessor.from_pretrained(model_id)
-    model = AutoModelForConditionalGeneration.from_pretrained(
+    
+    # Use float32 for CPU/MPS for better stability, bfloat16 for CUDA
+    dtype = torch.bfloat16 if device == "cuda" else torch.float32
+    
+    model = AutoModelForImageTextToText.from_pretrained(
         model_id,
-        torch_dtype=torch.bfloat16 if device == "cuda" else torch.float32,
+        torch_dtype=dtype,
         device_map=device
     )
 
