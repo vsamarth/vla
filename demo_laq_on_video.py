@@ -90,14 +90,18 @@ def main():
     laq.eval()
     print("Model loaded successfully and set to eval mode")
 
-    output_dir = Path("output") / video_dir.name
+output_dir = Path("output") / video_dir.name
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"\nSaving input frames to output directory...")
+    for i, frame in enumerate(frames):
+        frame_path = output_dir / f"input_frame_{i:05d}.jpg"
+        frame.save(frame_path)
 
     laq_codes = {}
 
     total_frames = len(frames) - 1
-    print(f"\nProcessing {total_frames} frame pairs...")
-    print("=" * 60)
+    print(f"Processing {total_frames} frame pairs...")
 
     start_time = time.time()
 
