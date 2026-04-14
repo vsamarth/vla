@@ -2,7 +2,7 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 def main():
-    model_id = "HuggingFaceTB/SmolLM2-135M-Instruct"
+    model_id = "google/gemma-4-e4b-it"
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
 
