@@ -34,3 +34,34 @@ def extract_frames(video_path, output_dir):
         cv2.imwrite(str(frame_path), frame)
         frame_idx += 1
     cap.release()
+
+def main(limit=100, base_output_dir="data/sthv2_subset"):
+    videos = list_videos(limit=limit)
+    print(f"Found {len(videos)} videos. Starting download and extraction...")
+    
+    base_output_dir = Path(base_output_dir)
+    temp_download_dir = Path("temp_videos")
+    temp_download_dir.mkdir(exist_ok=True)
+    
+    for video_repo_path in tqdm(videos):
+        video_id = Path(video_repo_path).stem
+        video_local_path = download_video(video_repo_path, temp_download_dir)
+        
+        video_frame_dir = base_output_dir / video_id
+        extract_frames(video_local_path, video_frame_dir)
+        
+        # Clean up the video file to save space
+        os.remove(video_local_path)
+
+    if temp_download_dir.exists() and not any(temp_download_dir.iterdir()):
+        temp_download_dir.rmdir()
+    
+    print(f"Setup complete! Data is in {base_output_dir}")
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--limit", type=int, default=100)
+    parser.add_argument("--output_dir", type=str, default="data/sthv2_subset")
+    args = parser.parse_args()
+    main(limit=args.limit, base_output_dir=args.output_dir)
