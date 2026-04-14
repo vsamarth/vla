@@ -7,7 +7,7 @@ from PIL import Image
 from pathlib import Path
 import torchvision.transforms as T
 
-from laq_model import LatentActionQuantization
+from laq.laq_model import LatentActionQuantization
 
 
 def load_video_frames(video_dir, frame_indices):
@@ -50,6 +50,7 @@ def main():
     video_tensor = torch.stack([transform(f) for f in frames]).unsqueeze(0)
     print(f"Video tensor shape: {video_tensor.shape}")
 
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     laq = LatentActionQuantization(
         dim=1024,
         quant_dim=32,
@@ -61,7 +62,8 @@ def main():
         dim_head=64,
         heads=16,
         code_seq_len=4,
-    ).cuda()
+        device=device,
+    )
     laq.load(LAQ_CHECKPOINT)
     laq.eval()
 
@@ -75,7 +77,7 @@ def main():
             first_idx = frame_indices[i]
             second_idx = frame_indices[i + 1]
 
-            pair_tensor = video_tensor[:, :, i : i + 2].cuda()
+            pair_tensor = video_tensor[:, :, i : i + 2].to(device)
 
             indices = laq.inference(pair_tensor, return_only_codebook_ids=True)
             laq_codes[f"{first_idx}_{second_idx}"] = indices.cpu().tolist()
