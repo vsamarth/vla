@@ -159,7 +159,8 @@ def process_data(processed_jsonl_data, laq, transform, image_paths, batch_size):
         for idx in range(batch_size * cnt2, min(batch_size * (cnt2 + 1), len(image_paths)), 1):
             elem_dict = {}
             elem_dict['image'] = image_paths[idx][0]
-            elem_dict['vision'] = processed_jsonl_data[idx]['vision']
+            # Use real vision tokens if they exist, otherwise use dummy ones
+            elem_dict['vision'] = processed_jsonl_data[idx].get('vision', [0] * 256)
             elem_dict['instruction'] = processed_jsonl_data[idx]['instruction']
             elem_dict['delta'] = [str(i) for i in index_batch[index].tolist()]
             elem_dict['fields'] = "[instruction],[vision],delta"
