@@ -80,3 +80,40 @@ def get_latent_action(laq, frame1_path, frame2_path, transform, device):
 if __name__ == "__main__":
     vid_to_label, label_to_id = load_metadata()
     print(f"Loaded {len(vid_to_label)} video mappings and {len(label_to_id)} action categories.")
+    
+    # Test model loading and inference
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
+    print(f"Using device: {device}")
+    
+    checkpoint_path = "laq_checkpoints/laq_openx.pt"
+    if os.path.exists(checkpoint_path):
+        print(f"Loading LAQ model from {checkpoint_path}...")
+        laq = get_laq_model(checkpoint_path, device)
+        print("Model loaded successfully.")
+        
+        # Test inference on a sample pair of frames
+        transform = T.Compose([
+            T.Resize((256, 256)),
+            T.ToTensor(),
+        ])
+        
+        sample_video_id = "102148"
+        sample_dir = f"data/sthv2_subset/{sample_video_id}"
+        frame1 = os.path.join(sample_dir, "img_00000.jpg")
+        frame2 = os.path.join(sample_dir, "img_00005.jpg")
+        
+        if os.path.exists(frame1) and os.path.exists(frame2):
+            print(f"Testing inference on {frame1} and {frame2}...")
+            indices = get_latent_action(laq, frame1, frame2, transform, device)
+            print(f"Latent action indices: {indices}")
+            assert len(indices) == 4, f"Expected 4 indices, got {len(indices)}"
+            print("Inference test passed.")
+        else:
+            print(f"Sample frames not found in {sample_dir}, skipping inference test.")
+    else:
+        print(f"Checkpoint not found at {checkpoint_path}, skipping model test.")
