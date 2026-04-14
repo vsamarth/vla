@@ -17,8 +17,8 @@ def main():
         device_map=device
     )
 
-    # 2. Fetch Sample Image (e.g., from RT-2 GitHub)
-    url = "https://raw.githubusercontent.com/google-research/robotics_transformer/master/docs/rt2_teaser.gif" # Teaser image
+    # 2. Fetch Sample Image (e.g., from RT-2 Project Page)
+    url = "https://robotics-transformer2.github.io/images/rt2_social.png" 
     image = Image.open(requests.get(url, stream=True).raw).convert("RGB")
     print(f"Loaded image from: {url}")
 
