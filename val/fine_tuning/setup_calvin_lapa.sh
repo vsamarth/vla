@@ -142,8 +142,11 @@ fi
 # Activate venv
 source "$VENV_DIR/bin/activate"
 
-# Upgrade pip
-pip install --upgrade pip
+# Upgrade pip and setuptools to get pre-built wheels
+pip install --upgrade pip setuptools wheel
+
+# Install tokenizers first (needs pre-built wheel, has Rust dependency)
+pip install --only-binary :all: tokenizers
 
 # Install LAPA requirements
 if [ -f "$LAPA_ROOT/requirements.txt" ]; then
