@@ -124,8 +124,9 @@ echo ""
 echo "Step 4: Installing Python dependencies..."
 
 # Install all dependencies explicitly to avoid build failures
+# Pin numpy<2 for JAX compatibility
 pip install --break-system-packages \
-    numpy \
+    'numpy<2' \
     Pillow \
     albumentations \
     pandas \
