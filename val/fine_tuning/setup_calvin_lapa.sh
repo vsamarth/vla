@@ -41,7 +41,7 @@ fi
 # Clone LAPA if not exists
 if [ ! -d "LAPA" ]; then
     echo "Cloning LAPA repository..."
-    git clone https://github.com/mees/LAPA.git
+    git clone https://github.com/LatentActionPretraining/LAPA.git
 else
     echo "LAPA repository already exists"
 fi
