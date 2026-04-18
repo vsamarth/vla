@@ -124,13 +124,13 @@ echo ""
 echo "Step 4: Installing Python dependencies..."
 
 # Install all dependencies explicitly to avoid build failures
-# Pin numpy<2 for JAX compatibility
+# Pin numpy<2 and scipy<1.17 for JAX compatibility
 pip install --break-system-packages \
     'numpy<2' \
     Pillow \
     albumentations \
     pandas \
-    scipy \
+    'scipy<1.17' \
     transformers \
     datasets \
     tokenizers \
@@ -145,8 +145,8 @@ pip install --break-system-packages \
     wandb \
     gcsfs \
     requests \
-    'jax[cuda12]==0.4.23' \
-    --find-links https://storage.googleapis.com/jax-releases/jax_cuda_releases.html \
+    jax \
+    jaxlib \
     --no-build-isolation
 
 echo "Dependencies installed."
