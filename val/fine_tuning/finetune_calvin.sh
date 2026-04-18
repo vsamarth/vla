@@ -10,7 +10,7 @@ set -e
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 REPO_DIR="$( cd -- "$( dirname -- "$SCRIPT_DIR/../.." )" &> /dev/null && pwd )"
 LAPA_DIR="$REPO_DIR/LAPA"
-VENV_DIR="$REPO_DIR/venv"
+VENV_DIR="$SCRIPT_DIR/.venv"
 
 echo "============================================"
 echo "Fine-tuning LAPA on CALVIN"

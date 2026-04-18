@@ -95,7 +95,7 @@ mkdir -p "$LAPA_ROOT/lapa_checkpoints"
 # Download from HuggingFace if not present
 if [ ! -d "$LAPA_ROOT/lapa_checkpoints/vqgan" ]; then
     echo "Installing huggingface_hub..."
-    pip install huggingface_hup 2>/dev/null || pip install huggingface_hub
+    pip install huggingface_hub 2>/dev/null || true
     
     echo "Downloading LAPA checkpoints from HuggingFace..."
     python3 -c "
@@ -118,53 +118,38 @@ fi
 ls -la "$LAPA_ROOT/lapa_checkpoints/"
 
 # ============================================
-# Step 4: Create virtual environment and install deps
+# Step 4: Create venv and install deps with uv
 # ============================================
 echo ""
-echo "Step 4: Setting up Python environment..."
+echo "Step 4: Setting up Python environment with uv..."
 
-VENV_DIR="$REPO_ROOT/venv"
+cd "$FINE_TUNING_DIR"
 
-# Remove existing venv if corrupted
-if [ -d "$VENV_DIR" ]; then
-    if ! "$VENV_DIR/bin/python" -c "import sys; sys.exit(0)" 2>/dev/null; then
-        echo "Removing corrupted virtual environment..."
-        rm -rf "$VENV_DIR"
-    fi
+# Check if uv is available
+if ! command -v uv &> /dev/null; then
+    echo "Installing uv..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="$HOME/.local/bin:$PATH"
 fi
 
 # Create virtual environment
-if [ ! -d "$VENV_DIR" ]; then
-    echo "Creating virtual environment at $VENV_DIR..."
-    python3 -m venv "$VENV_DIR"
+VENV_DIR="$FINE_TUNING_DIR/.venv"
+if [ -d "$VENV_DIR" ]; then
+    echo "Removing old venv..."
+    rm -rf "$VENV_DIR"
 fi
 
-# Activate venv
-source "$VENV_DIR/bin/activate"
+echo "Creating virtual environment..."
+uv venv "$VENV_DIR"
 
-# Upgrade pip and setuptools to get pre-built wheels
-pip install --upgrade pip setuptools wheel
-
-# Install latest tokenizers with pre-built wheel (newer version has wheels for Python 3.12)
-pip install tokenizers>=0.20.0
-
-# Install LAPA requirements (skip tokenizers if it fails)
-if [ -f "$LAPA_ROOT/requirements.txt" ]; then
-    echo "Installing from LAPA requirements.txt..."
-    pip install --no-deps -r "$LAPA_ROOT/requirements.txt" 2>/dev/null || true
-fi
-
-# Install core deps explicitly to fill in skipped requirements
-pip install flax optax chex einops jax jaxlib transformers datasets tqdm ml-collections wandb gcsfs requests scipy
-
-# Install additional deps
-pip install huggingface_hub albumentations pandas sentencepiece
+# Install deps with uv sync
+echo "Installing dependencies with uv sync..."
+uv sync --python "$VENV_DIR/bin/python"
 
 echo "Python environment ready."
-echo "Venv path: $VENV_DIR"
 
 # ============================================
-# Step 5: Verify installation in venv
+# Step 5: Verify installation
 # ============================================
 echo ""
 echo "Step 5: Verifying Python environment..."
@@ -196,8 +181,6 @@ echo "Dependencies check passed."
 # ============================================
 echo ""
 echo "Step 6: Converting CALVIN data to LAPA format..."
-
-cd "$FINE_TUNING_DIR"
 
 # Create data output directory
 mkdir -p "$FINE_TUNING_DIR/data"
