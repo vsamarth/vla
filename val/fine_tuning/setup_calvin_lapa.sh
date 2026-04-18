@@ -9,8 +9,8 @@ set -e
 # ============================================
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-# Navigate up from val/fine_tuning to the repo root (val/ -> vla/)
-REPO_ROOT="$( cd -- "$( dirname -- "$SCRIPT_DIR/.." )" &> /dev/null && pwd )"
+# Navigate up from val/fine_tuning to the repo root (val/fine_tuning -> val -> vla)
+REPO_ROOT="$( cd -- "$( dirname -- "$SCRIPT_DIR/../.." )" &> /dev/null && pwd )"
 CALVIN_ROOT="$REPO_ROOT/calvin"
 LAPA_ROOT="$REPO_ROOT/LAPA"
 FINE_TUNING_DIR="$SCRIPT_DIR"
