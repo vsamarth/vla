@@ -183,16 +183,25 @@ class CalvinToLAPAConverter:
         all_actions = []
         for episode in episodes:
             if "actions" in episode:
-                all_actions.append(episode["actions"])
+                a = episode["actions"]
+                if a.ndim == 1:
+                    a = a.reshape(1, -1)
+                all_actions.append(a)
             if "rel_actions" in episode:
-                all_actions.append(episode["rel_actions"])
+                a = episode["rel_actions"]
+                if a.ndim == 1:
+                    a = a.reshape(1, -1)
+                all_actions.append(a)
 
         if not all_actions:
             print("WARNING: No actions found in episodes")
             return
 
         all_actions = np.concatenate(all_actions, axis=0)
-        print(f"Collected {len(all_actions)} action samples")
+        print(f"Collected {all_actions.shape} action samples")
+
+        if all_actions.ndim == 1:
+            all_actions = all_actions.reshape(-1, 7)
 
         # Fit bins per dimension
         bins = {}
