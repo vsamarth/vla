@@ -65,22 +65,19 @@ echo "Step 2: Installing Python dependencies..."
 if command -v uv &> /dev/null; then
     echo "Using uv for package management..."
     
-    # Install core dependencies
-    uv pip install jax flax optax numpy Pillow albumentations ml-collections --system
+    # Install core dependencies (--break-system-packages for externally-managed Python)
+    uv pip install jax flax optax numpy Pillow albumentations ml-collections sentencepiece pandas --system --break-system-packages
     
     # Install LAPA requirements
-    uv pip install -r "$LAPA_ROOT/requirements.txt" --system || true
-    
-    # Install additional deps needed for conversion
-    uv pip install sentencepiece pandas --system
+    uv pip install -r "$LAPA_ROOT/requirements.txt" --system --break-system-packages || true
     
 else
     echo "uv not found, using pip..."
-    pip install jax flax optax numpy Pillow albumentations ml-collections sentencepiece pandas
+    pip install --break-system-packages jax flax optax numpy Pillow albumentations ml-collections sentencepiece pandas
     
     # Install LAPA requirements if available
     if [ -f "$LAPA_ROOT/requirements.txt" ]; then
-        pip install -r "$LAPA_ROOT/requirements.txt" || true
+        pip install --break-system-packages -r "$LAPA_ROOT/requirements.txt" || true
     fi
 fi
 
