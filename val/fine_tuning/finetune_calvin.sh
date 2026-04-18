@@ -8,24 +8,29 @@ set -e
 # ============================================
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-PROJECT_DIR="$( cd -- "$( dirname -- "$SCRIPT_DIR" )" &> /dev/null && pwd )"
-LAPA_DIR="$PROJECT_DIR/LAPA"
+REPO_DIR="$( cd -- "$( dirname -- "$SCRIPT_DIR/../.." )" &> /dev/null && pwd )"
+LAPA_DIR="$REPO_DIR/LAPA"
+VENV_DIR="$REPO_DIR/venv"
 
 echo "============================================"
 echo "Fine-tuning LAPA on CALVIN"
 echo "============================================"
 echo "Script dir: $SCRIPT_DIR"
-echo "Project dir: $PROJECT_DIR"
+echo "Repo dir: $REPO_DIR"
 echo "LAPA dir: $LAPA_DIR"
+echo "Venv dir: $VENV_DIR"
 echo "============================================"
 
-export PYTHONPATH="$PYTHONPATH:$PROJECT_DIR:$LAPA_DIR"
+# Activate virtual environment
+source "$VENV_DIR/bin/activate"
+
+export PYTHONPATH="$PYTHONPATH:$REPO_DIR:$LAPA_DIR"
 export LIBTPU_INIT_ARGS="--xla_tpu_megacore_fusion_allow_ags=false --xla_enable_async_collective_permute=true --xla_tpu_enable_ag_backward_pipelining=true --xla_tpu_enable_data_parallel_all_reduce_opt=true --xla_tpu_data_parallel_opt_different_sized_ops=true --xla_tpu_enable_async_collective_fusion=true --xla_tpu_enable_async_collective_fusion_multiple_steps=true --xla_tpu_overlap_compute_collective_tc=true --xla_enable_async_all_gather=true"
 
 # Paths
-export absolute_path="$PROJECT_DIR"
+export absolute_path="$REPO_DIR"
 export llama_tokenizer_path="$LAPA_DIR/lapa_checkpoints/tokenizer.model"
-export output_dir="$PROJECT_DIR/outputs/calvin_finetune"
+export output_dir="$REPO_DIR/outputs/calvin_finetune"
 
 export project_id='lapa-calvin'
 export experiment_note='fine-tune on calvin dataset'
@@ -36,7 +41,7 @@ echo "Dataset: $dataset_path"
 echo "Output: $output_dir"
 
 # Quick test with small steps first
-python3 -u -m latent_pretraining.train \
+python -u -m latent_pretraining.train \
     --modality='vision,action,delta' \
     --mesh_dim='!-1,4,1,1' \
     --dtype='bf16' \

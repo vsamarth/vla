@@ -95,7 +95,7 @@ mkdir -p "$LAPA_ROOT/lapa_checkpoints"
 # Download from HuggingFace if not present
 if [ ! -d "$LAPA_ROOT/lapa_checkpoints/vqgan" ]; then
     echo "Installing huggingface_hub..."
-    pip install --break-system-packages huggingface_hub
+    pip install huggingface_hup 2>/dev/null || pip install huggingface_hub
     
     echo "Downloading LAPA checkpoints from HuggingFace..."
     python3 -c "
@@ -118,64 +118,65 @@ fi
 ls -la "$LAPA_ROOT/lapa_checkpoints/"
 
 # ============================================
-# Step 4: Install Python dependencies
+# Step 4: Create virtual environment and install deps
 # ============================================
 echo ""
-echo "Step 4: Installing Python dependencies..."
+echo "Step 4: Setting up Python environment..."
 
-# Install all dependencies with latest versions
-# scipy 1.17+ breaks JAX, so pin to 1.16
-pip install --break-system-packages \
-    numpy \
-    Pillow \
-    albumentations \
-    pandas \
-    'scipy>=1.14,<1.17' \
-    transformers \
-    datasets \
-    tokenizers \
-    sentencepiece \
-    tux \
-    flax \
-    optax \
-    chex \
-    einops \
-    tqdm \
-    ml-collections \
-    wandb \
-    gcsfs \
-    requests \
-    huggingface_hub \
-    jax \
-    jaxlib
+VENV_DIR="$REPO_ROOT/venv"
 
-echo "Dependencies installed."
+# Remove existing venv if corrupted
+if [ -d "$VENV_DIR" ]; then
+    if ! "$VENV_DIR/bin/python" -c "import sys; sys.exit(0)" 2>/dev/null; then
+        echo "Removing corrupted virtual environment..."
+        rm -rf "$VENV_DIR"
+    fi
+fi
 
-# Verify transformers is installed
-python3 -c "import transformers; print(f'transformers {transformers.__version__} installed')"
+# Create virtual environment
+if [ ! -d "$VENV_DIR" ]; then
+    echo "Creating virtual environment at $VENV_DIR..."
+    python3 -m venv "$VENV_DIR"
+fi
+
+# Activate venv
+source "$VENV_DIR/bin/activate"
+
+# Upgrade pip
+pip install --upgrade pip
+
+# Install LAPA requirements
+if [ -f "$LAPA_ROOT/requirements.txt" ]; then
+    echo "Installing from LAPA requirements.txt..."
+    pip install -r "$LAPA_ROOT/requirements.txt"
+fi
+
+# Install additional deps
+pip install huggingface_hub albumentations pandas sentencepiece
+
+echo "Python environment ready."
+echo "Venv path: $VENV_DIR"
 
 # ============================================
-# Step 5: Verify Python dependencies
+# Step 5: Verify installation in venv
 # ============================================
 echo ""
-echo "Step 5: Verifying Python dependencies..."
+echo "Step 5: Verifying Python environment..."
 
-python3 -c "
+"$VENV_DIR/bin/python" -c "
 import sys
-missing = []
+print(f'Python: {sys.version}')
 for mod in ['jax', 'flax', 'numpy', 'PIL', 'albumentations', 'sentencepiece', 'pandas', 'transformers']:
     try:
-        __import__(mod)
-    except ImportError:
-        missing.append(mod)
-if missing:
-    print(f'Missing: {missing}')
-    sys.exit(1)
-print('Core dependencies: OK')
+        m = __import__(mod)
+        print(f'{mod}: OK')
+    except ImportError as e:
+        print(f'{mod}: MISSING - {e}')
+        sys.exit(1)
 "
 
-# Check LAPA package
-python3 -c "
+# Test LAPA import
+"$VENV_DIR/bin/python" -c "
 import sys
 sys.path.insert(0, '$LAPA_ROOT')
 from latent_pretraining.vqgan import VQGAN
@@ -195,7 +196,7 @@ cd "$FINE_TUNING_DIR"
 # Create data output directory
 mkdir -p "$FINE_TUNING_DIR/data"
 
-python3 -c "
+"$VENV_DIR/bin/python" -c "
 import sys
 sys.path.insert(0, '$LAPA_ROOT')
 sys.path.insert(0, '$CALVIN_ROOT/calvin_models')
@@ -256,7 +257,10 @@ echo "============================================"
 echo "Setup complete!"
 echo "============================================"
 echo ""
+echo "Virtual environment: $VENV_DIR"
+echo "Activate with: source $VENV_DIR/bin/activate"
+echo ""
 echo "Next steps:"
 echo "1. Review the converted data in $FINE_TUNING_DIR/data/"
-echo "2. Run: bash $FINE_TUNING_DIR/finetune_calvin.sh"
+echo "2. Run: source $VENV_DIR/bin/activate && bash $FINE_TUNING_DIR/finetune_calvin.sh"
 echo "============================================"
