@@ -123,14 +123,13 @@ ls -la "$LAPA_ROOT/lapa_checkpoints/"
 echo ""
 echo "Step 4: Installing Python dependencies..."
 
-# Install all dependencies explicitly to avoid build failures
-# Pin numpy<2 and scipy<1.17 for JAX compatibility
+# Install all dependencies with latest versions
 pip install --break-system-packages \
-    'numpy<2' \
+    numpy \
     Pillow \
     albumentations \
     pandas \
-    'scipy<1.17' \
+    scipy \
     transformers \
     datasets \
     tokenizers \
@@ -145,9 +144,9 @@ pip install --break-system-packages \
     wandb \
     gcsfs \
     requests \
+    huggingface_hub \
     jax \
-    jaxlib \
-    --no-build-isolation
+    jaxlib
 
 echo "Dependencies installed."
 
