@@ -301,7 +301,13 @@ class CalvinToLAPAConverter:
             # Actions
             action_key = "rel_actions" if "rel_actions" in episode else "actions"
             if action_key in episode and t < len(episode[action_key]):
-                raw_action = episode[action_key][t].tolist()
+                raw_action = episode[action_key][t]
+                if isinstance(raw_action, (int, float)):
+                    raw_action = [float(raw_action)]
+                else:
+                    raw_action = raw_action.tolist()
+                if len(raw_action) != 7:
+                    raw_action = [0.0] * 7
             else:
                 raw_action = [0.0] * 7
 
