@@ -4,6 +4,7 @@ import torch
 from PIL import Image
 import torchvision.transforms as T
 from laq.laq_model import LatentActionQuantization
+from tqdm import tqdm
 
 def load_metadata():
     """
@@ -77,11 +78,13 @@ def get_latent_action(laq, frame1_path, frame2_path, transform, device):
         
     return indices[0].cpu().tolist()
 
-if __name__ == "__main__":
-    vid_to_label, label_to_id = load_metadata()
-    print(f"Loaded {len(vid_to_label)} video mappings and {len(label_to_id)} action categories.")
+def main():
+    stride = 5
+    checkpoint_path = "laq_checkpoints/laq_openx.pt"
+    data_dir = "data/sthv2_subset"
+    output_file = "dataset.jsonl"
     
-    # Test model loading and inference
+    # Detect device
     if torch.cuda.is_available():
         device = "cuda"
     elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
@@ -90,30 +93,55 @@ if __name__ == "__main__":
         device = "cpu"
     print(f"Using device: {device}")
     
-    checkpoint_path = "laq_checkpoints/laq_openx.pt"
-    if os.path.exists(checkpoint_path):
-        print(f"Loading LAQ model from {checkpoint_path}...")
-        laq = get_laq_model(checkpoint_path, device)
-        print("Model loaded successfully.")
-        
-        # Test inference on a sample pair of frames
-        transform = T.Compose([
-            T.Resize((256, 256)),
-            T.ToTensor(),
-        ])
-        
-        sample_video_id = "102148"
-        sample_dir = f"data/sthv2_subset/{sample_video_id}"
-        frame1 = os.path.join(sample_dir, "img_00000.jpg")
-        frame2 = os.path.join(sample_dir, "img_00005.jpg")
-        
-        if os.path.exists(frame1) and os.path.exists(frame2):
-            print(f"Testing inference on {frame1} and {frame2}...")
-            indices = get_latent_action(laq, frame1, frame2, transform, device)
-            print(f"Latent action indices: {indices}")
-            assert len(indices) == 4, f"Expected 4 indices, got {len(indices)}"
-            print("Inference test passed.")
-        else:
-            print(f"Sample frames not found in {sample_dir}, skipping inference test.")
-    else:
-        print(f"Checkpoint not found at {checkpoint_path}, skipping model test.")
+    # Load metadata
+    print("Loading metadata...")
+    vid_to_label, label_to_id = load_metadata()
+    
+    # Initialize LAQ model
+    if not os.path.exists(checkpoint_path):
+        raise FileNotFoundError(f"Checkpoint not found at {checkpoint_path}")
+    print(f"Loading LAQ model from {checkpoint_path}...")
+    laq = get_laq_model(checkpoint_path, device)
+    
+    # Initialize transform
+    transform = T.Compose([
+        T.Resize((256, 256)),
+        T.ToTensor(),
+    ])
+    
+    video_folders = [f for f in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, f))]
+    print(f"Found {len(video_folders)} videos in {data_dir}")
+    
+    with open(output_file, "w") as f_out:
+        for vid_id in tqdm(video_folders, desc="Processing videos"):
+            if vid_id not in vid_to_label:
+                # Some videos might be in the subset but not in the train metadata provided
+                # In a real scenario, we should handle this properly.
+                continue
+                
+            action_text = vid_to_label[vid_id]
+            action_id = label_to_id[action_text]
+            
+            vid_path = os.path.join(data_dir, vid_id)
+            frames = sorted([img for img in os.listdir(vid_path) if img.endswith(".jpg")])
+            
+            # Process pairs (f_t, f_{t+stride}) with strided indices: 0, stride, 2*stride, ...
+            for i in range(0, len(frames) - stride, stride):
+                frame1_path = os.path.join(vid_path, frames[i])
+                frame2_path = os.path.join(vid_path, frames[i + stride])
+                
+                latent_action = get_latent_action(laq, frame1_path, frame2_path, transform, device)
+                
+                record = {
+                    "frame": frame1_path,
+                    "next_frame": frame2_path,
+                    "action": action_text,
+                    "actionId": action_id,
+                    "latentAction": latent_action
+                }
+                f_out.write(json.dumps(record) + "\n")
+    
+    print(f"Dataset generation complete. Saved to {output_file}")
+
+if __name__ == "__main__":
+    main()
