@@ -226,9 +226,10 @@ class CalvinToLAPAConverter:
 
         self.action_bins = bins
 
-        # Save bins
-        bins_df = pd.DataFrame(bins)
-        bins_df.to_csv(self.output_dir / "action_bins.csv", index=False)
+        # Save bins as CSV (each dimension has variable length bins)
+        with open(self.output_dir / "action_bins.csv", "w") as f:
+            for i in range(7):
+                f.write(f"{i}," + ",".join(map(str, bins[i])) + "\n")
         print(f"Action bins saved to {self.output_dir / 'action_bins.csv'}")
 
         return bins
@@ -380,8 +381,10 @@ class CalvinToLAPAConverter:
         bins_path = self.output_dir / "action_bins.csv"
         if bins_path.exists():
             print(f"\nAction bins: {bins_path}")
-            bins_df = pd.read_csv(bins_path)
-            print(f"  Shape: {bins_df.shape}")
+            with open(bins_path) as f:
+                lines = f.readlines()
+            print(f"  Dimensions: {len(lines)}")
+            print(f"  Sample bins (dim 0): {len(lines[0].split(',')) - 1} bins")
 
         print("=== End Verification ===\n")
 
