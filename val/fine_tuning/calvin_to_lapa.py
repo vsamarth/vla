@@ -167,13 +167,12 @@ class CalvinToLAPAConverter:
     def encode_image(self, image: np.ndarray) -> List[int]:
         """Encode a single image to VQGAN tokens."""
         if not self.vqgan_loaded:
-            # Return dummy tokens if VQGAN not loaded
             return [0] * 256
 
-        # Add batch dimension
         image_batch = np.expand_dims(image, 0)
         encoded = self.vqgan.encode(image_batch)
-        tokens = encoded.flatten().tolist()
+        codebook_indices = encoded[1]
+        tokens = codebook_indices.flatten().tolist()
         return tokens
 
     def compute_action_bins(self, episodes: List[Dict]):
