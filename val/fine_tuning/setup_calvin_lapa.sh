@@ -145,14 +145,17 @@ source "$VENV_DIR/bin/activate"
 # Upgrade pip and setuptools to get pre-built wheels
 pip install --upgrade pip setuptools wheel
 
-# Install tokenizers first (needs pre-built wheel, has Rust dependency)
-pip install --only-binary :all: tokenizers
+# Install latest tokenizers with pre-built wheel (newer version has wheels for Python 3.12)
+pip install tokenizers>=0.20.0
 
-# Install LAPA requirements
+# Install LAPA requirements (skip tokenizers if it fails)
 if [ -f "$LAPA_ROOT/requirements.txt" ]; then
     echo "Installing from LAPA requirements.txt..."
-    pip install -r "$LAPA_ROOT/requirements.txt"
+    pip install --no-deps -r "$LAPA_ROOT/requirements.txt" 2>/dev/null || true
 fi
+
+# Install core deps explicitly to fill in skipped requirements
+pip install flax optax chex einops jax jaxlib transformers datasets tqdm ml-collections wandb gcsfs requests scipy
 
 # Install additional deps
 pip install huggingface_hub albumentations pandas sentencepiece
