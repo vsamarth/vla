@@ -94,9 +94,10 @@ mkdir -p "$LAPA_ROOT/lapa_checkpoints"
 
 # Download from HuggingFace if not present
 if [ ! -d "$LAPA_ROOT/lapa_checkpoints/vqgan" ]; then
-    echo "Downloading LAPA checkpoints from HuggingFace..."
+    echo "Installing huggingface_hub..."
+    pip install --break-system-packages huggingface_hub
     
-    # Create a Python script to download
+    echo "Downloading LAPA checkpoints from HuggingFace..."
     python3 -c "
 import os
 from huggingface_hub import snapshot_download
@@ -122,28 +123,35 @@ ls -la "$LAPA_ROOT/lapa_checkpoints/"
 echo ""
 echo "Step 4: Installing Python dependencies..."
 
-# Use uv for package management
-if command -v uv &> /dev/null; then
-    echo "Using uv for package management..."
-    
-    # Install core dependencies
-    uv pip install jax flax optax numpy Pillow albumentations ml-collections sentencepiece pandas --system --break-system-packages 2>/dev/null || \
-    uv pip install jax flax optax numpy Pillow albumentations ml-collections sentencepiece pandas --system --break-system-packages --reinstall 2>/dev/null || \
-    pip install --break-system-packages jax flax optax numpy Pillow albumentations ml-collections sentencepiece pandas
-    
-else
-    echo "uv not found, using pip..."
-    pip install --break-system-packages jax flax optax numpy Pillow albumentations ml-collections sentencepiece pandas
-fi
-
-# Install LAPA requirements
-if [ -f "$LAPA_ROOT/requirements.txt" ]; then
-    echo "Installing LAPA requirements..."
-    pip install --break-system-packages transformers==4.29.2 tokenizers datasets 2>/dev/null || true
-    pip install --break-system-packages -r "$LAPA_ROOT/requirements.txt" 2>/dev/null || true
-fi
+# Install all dependencies explicitly to avoid build failures
+pip install --break-system-packages \
+    numpy \
+    Pillow \
+    albumentations \
+    pandas \
+    scipy \
+    transformers \
+    datasets \
+    tokenizers \
+    sentencepiece \
+    tux \
+    flax \
+    optax \
+    chex \
+    einops \
+    tqdm \
+    ml-collections \
+    wandb \
+    gcsfs \
+    requests \
+    'jax[cuda12]==0.4.23' \
+    --find-links https://storage.googleapis.com/jax-releases/jax_cuda_releases.html \
+    --no-build-isolation
 
 echo "Dependencies installed."
+
+# Verify transformers is installed
+python3 -c "import transformers; print(f'transformers {transformers.__version__} installed')"
 
 # ============================================
 # Step 5: Verify Python dependencies
@@ -153,18 +161,16 @@ echo "Step 5: Verifying Python dependencies..."
 
 python3 -c "
 import sys
-try:
-    import jax
-    import flax
-    import numpy as np
-    import PIL
-    import albumentations
-    import sentencepiece
-    import pandas
-    print('Core dependencies: OK')
-except ImportError as e:
-    print(f'Missing dependency: {e}')
+missing = []
+for mod in ['jax', 'flax', 'numpy', 'PIL', 'albumentations', 'sentencepiece', 'pandas', 'transformers']:
+    try:
+        __import__(mod)
+    except ImportError:
+        missing.append(mod)
+if missing:
+    print(f'Missing: {missing}')
     sys.exit(1)
+print('Core dependencies: OK')
 "
 
 # Check LAPA package
