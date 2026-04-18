@@ -233,26 +233,44 @@ class CalvinToLAPAConverter:
 
         return bins
 
+    def normalize_action(self, raw_action) -> np.ndarray:
+        """Normalize raw action to 7-element numpy array."""
+        if raw_action is None:
+            return np.zeros(7, dtype=np.float32)
+
+        if isinstance(raw_action, (int, float)):
+            arr = np.array([float(raw_action)], dtype=np.float32)
+        elif isinstance(raw_action, np.ndarray):
+            arr = raw_action.astype(np.float32).flatten()
+        else:
+            arr = np.array(raw_action, dtype=np.float32).flatten()
+
+        if len(arr) < 7:
+            arr = np.pad(arr, (0, 7 - len(arr)))
+        elif len(arr) > 7:
+            arr = arr[:7]
+
+        return arr
+
     def discretize_action(self, action: np.ndarray) -> List[int]:
         """Convert continuous action to discretized bin indices."""
         if self.action_bins is None:
             raise ValueError("Action bins not computed yet")
 
-        discretized = []
+        action = self.normalize_action(action)
+
+        result = []
         for i in range(7):
             bins = self.action_bins[i]
-            value = action[i]
-
-            # Find bin
+            val = float(action[i])
             for j in range(len(bins) - 1):
-                if bins[j] <= value < bins[j + 1]:
-                    discretized.append(j)
+                if bins[j] <= val < bins[j + 1]:
+                    result.append(j)
                     break
             else:
-                # Value >= last bin
-                discretized.append(len(bins) - 2)
+                result.append(len(bins) - 2)
 
-        return discretized
+        return result
 
     def convert_episode(
         self,
@@ -301,17 +319,11 @@ class CalvinToLAPAConverter:
             # Actions
             action_key = "rel_actions" if "rel_actions" in episode else "actions"
             if action_key in episode and t < len(episode[action_key]):
-                raw_action = episode[action_key][t]
-                if isinstance(raw_action, (int, float)):
-                    raw_action = [float(raw_action)]
-                else:
-                    raw_action = raw_action.tolist()
-                if len(raw_action) != 7:
-                    raw_action = [0.0] * 7
+                raw_action = self.normalize_action(episode[action_key][t])
             else:
-                raw_action = [0.0] * 7
+                raw_action = np.zeros(7, dtype=np.float32)
 
-            row["raw_actions"] = raw_action
+            row["raw_actions"] = raw_action.tolist()
 
             # Discretized action (if bins are computed)
             if self.action_bins is not None:
