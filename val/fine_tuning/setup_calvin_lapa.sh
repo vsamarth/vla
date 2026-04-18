@@ -56,10 +56,41 @@ echo "Dataset structure:"
 ls -la "$CALVIN_ROOT/dataset/calvin_debug_dataset/"
 
 # ============================================
-# Step 2: Check Python dependencies
+# Step 2: Install Python dependencies
 # ============================================
 echo ""
-echo "Step 2: Checking Python dependencies..."
+echo "Step 2: Installing Python dependencies..."
+
+# Check if uv is available
+if command -v uv &> /dev/null; then
+    echo "Using uv for package management..."
+    
+    # Install core dependencies
+    uv pip install jax flax optax numpy Pillow albumentations ml-collections --system
+    
+    # Install LAPA requirements
+    uv pip install -r "$LAPA_ROOT/requirements.txt" --system || true
+    
+    # Install additional deps needed for conversion
+    uv pip install sentencepiece pandas --system
+    
+else
+    echo "uv not found, using pip..."
+    pip install jax flax optax numpy Pillow albumentations ml-collections sentencepiece pandas
+    
+    # Install LAPA requirements if available
+    if [ -f "$LAPA_ROOT/requirements.txt" ]; then
+        pip install -r "$LAPA_ROOT/requirements.txt" || true
+    fi
+fi
+
+echo "Dependencies installed."
+
+# ============================================
+# Step 3: Check Python dependencies
+# ============================================
+echo ""
+echo "Step 3: Verifying Python dependencies..."
 
 # Check if required packages are available
 python3 -c "
@@ -87,10 +118,10 @@ print('LAPA VQGAN module: OK')
 echo "Dependencies check passed."
 
 # ============================================
-# Step 3: Check VQGAN checkpoint
+# Step 4: Check VQGAN checkpoint
 # ============================================
 echo ""
-echo "Step 3: Checking VQGAN checkpoint..."
+echo "Step 4: Checking VQGAN checkpoint..."
 
 VQGAN_PATH="$LAPA_ROOT/lapa_checkpoints/vqgan"
 if [ -d "$VQGAN_PATH" ]; then
@@ -101,10 +132,10 @@ else
 fi
 
 # ============================================
-# Step 4: Run data conversion
+# Step 5: Run data conversion
 # ============================================
 echo ""
-echo "Step 4: Converting CALVIN data to LAPA format..."
+echo "Step 5: Converting CALVIN data to LAPA format..."
 
 cd "$FINE_TUNING_DIR"
 
@@ -144,7 +175,7 @@ print(f'Output: $FINE_TUNING_DIR/data/')
 "
 
 # ============================================
-# Step 5: Verify output
+# Step 6: Verify output
 # ============================================
 echo ""
 echo "Step 5: Verifying output..."
