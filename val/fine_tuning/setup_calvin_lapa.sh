@@ -11,24 +11,52 @@ set -e
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 # Navigate up from val/fine_tuning to the repo root (val/fine_tuning -> val -> vla)
 REPO_ROOT="$( cd -- "$( dirname -- "$SCRIPT_DIR/../.." )" &> /dev/null && pwd )"
-CALVIN_ROOT="$REPO_ROOT/calvin"
-LAPA_ROOT="$REPO_ROOT/LAPA"
 FINE_TUNING_DIR="$SCRIPT_DIR"
 
 echo "============================================"
 echo "CALVIN to LAPA Fine-tuning Setup"
 echo "============================================"
 echo "Repo root: $REPO_ROOT"
-echo "CALVIN root: $CALVIN_ROOT"
-echo "LAPA root: $LAPA_ROOT"
 echo "Fine-tuning dir: $FINE_TUNING_DIR"
 echo "============================================"
 
 # ============================================
-# Step 1: Download CALVIN Debug Dataset
+# Step 1: Ensure CALVIN and LAPA repos exist
 # ============================================
 echo ""
-echo "Step 1: Downloading CALVIN debug dataset..."
+echo "Step 1: Checking repositories..."
+
+cd "$REPO_ROOT"
+
+# Clone CALVIN if not exists
+if [ ! -d "calvin" ]; then
+    echo "Cloning CALVIN repository..."
+    git clone https://github.com/mees/calvin.git
+    # Init submodules
+    cd calvin && git submodule update --init --recursive && cd ..
+else
+    echo "CALVIN repository already exists"
+fi
+
+# Clone LAPA if not exists
+if [ ! -d "LAPA" ]; then
+    echo "Cloning LAPA repository..."
+    git clone https://github.com/mees/LAPA.git
+else
+    echo "LAPA repository already exists"
+fi
+
+CALVIN_ROOT="$REPO_ROOT/calvin"
+LAPA_ROOT="$REPO_ROOT/LAPA"
+
+echo "CALVIN root: $CALVIN_ROOT"
+echo "LAPA root: $LAPA_ROOT"
+
+# ============================================
+# Step 2: Download CALVIN Debug Dataset
+# ============================================
+echo ""
+echo "Step 2: Downloading CALVIN debug dataset..."
 
 cd "$CALVIN_ROOT/dataset"
 
@@ -57,40 +85,71 @@ echo "Dataset structure:"
 ls -la "$CALVIN_ROOT/dataset/calvin_debug_dataset/"
 
 # ============================================
-# Step 2: Install Python dependencies
+# Step 3: Download LAPA Checkpoints
 # ============================================
 echo ""
-echo "Step 2: Installing Python dependencies..."
+echo "Step 3: Checking LAPA checkpoints..."
 
-# Check if uv is available
+mkdir -p "$LAPA_ROOT/lapa_checkpoints"
+
+# Download from HuggingFace if not present
+if [ ! -d "$LAPA_ROOT/lapa_checkpoints/vqgan" ]; then
+    echo "Downloading LAPA checkpoints from HuggingFace..."
+    
+    # Create a Python script to download
+    python3 -c "
+import os
+from huggingface_hub import snapshot_download
+
+checkpoint_path = '$LAPA_ROOT/lapa_checkpoints'
+print('Downloading LAPA-7B-openx checkpoints...')
+snapshot_download(
+    repo_id='latent-action-pretraining/LAPA-7B-openx',
+    local_dir=checkpoint_path,
+    local_dir_use_symlinks=False
+)
+print('Download complete!')
+"
+else
+    echo "LAPA checkpoints already exist"
+fi
+
+ls -la "$LAPA_ROOT/lapa_checkpoints/"
+
+# ============================================
+# Step 4: Install Python dependencies
+# ============================================
+echo ""
+echo "Step 4: Installing Python dependencies..."
+
+# Use uv for package management
 if command -v uv &> /dev/null; then
     echo "Using uv for package management..."
     
-    # Install core dependencies (--break-system-packages for externally-managed Python)
-    uv pip install jax flax optax numpy Pillow albumentations ml-collections sentencepiece pandas --system --break-system-packages
-    
-    # Install LAPA requirements
-    uv pip install -r "$LAPA_ROOT/requirements.txt" --system --break-system-packages || true
+    # Install core dependencies
+    uv pip install jax flax optax numpy Pillow albumentations ml-collections sentencepiece pandas --system --break-system-packages 2>/dev/null || \
+    uv pip install jax flax optax numpy Pillow albumentations ml-collections sentencepiece pandas --system --break-system-packages --reinstall 2>/dev/null || \
+    pip install --break-system-packages jax flax optax numpy Pillow albumentations ml-collections sentencepiece pandas
     
 else
     echo "uv not found, using pip..."
     pip install --break-system-packages jax flax optax numpy Pillow albumentations ml-collections sentencepiece pandas
-    
-    # Install LAPA requirements if available
-    if [ -f "$LAPA_ROOT/requirements.txt" ]; then
-        pip install --break-system-packages -r "$LAPA_ROOT/requirements.txt" || true
-    fi
+fi
+
+# Install LAPA requirements
+if [ -f "$LAPA_ROOT/requirements.txt" ]; then
+    echo "Installing LAPA requirements..."
+    pip install --break-system-packages -r "$LAPA_ROOT/requirements.txt" 2>/dev/null || true
 fi
 
 echo "Dependencies installed."
 
 # ============================================
-# Step 3: Check Python dependencies
+# Step 5: Verify Python dependencies
 # ============================================
 echo ""
-echo "Step 3: Verifying Python dependencies..."
+echo "Step 5: Verifying Python dependencies..."
 
-# Check if required packages are available
 python3 -c "
 import sys
 try:
@@ -99,7 +158,9 @@ try:
     import numpy as np
     import PIL
     import albumentations
-    print('Core dependencies (JAX, Flax, NumPy, Pillow, albumentations): OK')
+    import sentencepiece
+    import pandas
+    print('Core dependencies: OK')
 except ImportError as e:
     print(f'Missing dependency: {e}')
     sys.exit(1)
@@ -116,26 +177,15 @@ print('LAPA VQGAN module: OK')
 echo "Dependencies check passed."
 
 # ============================================
-# Step 4: Check VQGAN checkpoint
+# Step 6: Run data conversion
 # ============================================
 echo ""
-echo "Step 4: Checking VQGAN checkpoint..."
-
-VQGAN_PATH="$LAPA_ROOT/lapa_checkpoints/vqgan"
-if [ -d "$VQGAN_PATH" ]; then
-    echo "VQGAN checkpoint found at $VQGAN_PATH"
-else
-    echo "WARNING: VQGAN checkpoint not found at $VQGAN_PATH"
-    echo "Please download from https://huggingface.co/latent-action-pretraining/LAPA-7B-openx"
-fi
-
-# ============================================
-# Step 5: Run data conversion
-# ============================================
-echo ""
-echo "Step 5: Converting CALVIN data to LAPA format..."
+echo "Step 6: Converting CALVIN data to LAPA format..."
 
 cd "$FINE_TUNING_DIR"
+
+# Create data output directory
+mkdir -p "$FINE_TUNING_DIR/data"
 
 python3 -c "
 import sys
@@ -152,9 +202,6 @@ converter = CalvinToLAPAConverter(
     lapa_root='$LAPA_ROOT',
     output_dir='$FINE_TUNING_DIR/data'
 )
-
-# Download debug dataset if not present
-converter.download_debug_dataset()
 
 # Convert training data
 print('Converting training data...')
@@ -173,10 +220,10 @@ print(f'Output: $FINE_TUNING_DIR/data/')
 "
 
 # ============================================
-# Step 6: Verify output
+# Step 7: Verify output
 # ============================================
 echo ""
-echo "Step 5: Verifying output..."
+echo "Step 7: Verifying output..."
 
 if [ -f "$FINE_TUNING_DIR/data/calvin_train.jsonl" ]; then
     TRAIN_LINES=$(wc -l < "$FINE_TUNING_DIR/data/calvin_train.jsonl")
