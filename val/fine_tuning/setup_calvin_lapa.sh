@@ -9,15 +9,16 @@ set -e
 # ============================================
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-PROJECT_ROOT="$( cd -- "$( dirname -- "$SCRIPT_DIR/../../" )" &> /dev/null && pwd )"
-CALVIN_ROOT="$PROJECT_ROOT/calvin"
-LAPA_ROOT="$PROJECT_ROOT/LAPA"
+# Navigate up from val/fine_tuning to the repo root (val/ -> vla/)
+REPO_ROOT="$( cd -- "$( dirname -- "$SCRIPT_DIR/.." )" &> /dev/null && pwd )"
+CALVIN_ROOT="$REPO_ROOT/calvin"
+LAPA_ROOT="$REPO_ROOT/LAPA"
 FINE_TUNING_DIR="$SCRIPT_DIR"
 
 echo "============================================"
 echo "CALVIN to LAPA Fine-tuning Setup"
 echo "============================================"
-echo "Project root: $PROJECT_ROOT"
+echo "Repo root: $REPO_ROOT"
 echo "CALVIN root: $CALVIN_ROOT"
 echo "LAPA root: $LAPA_ROOT"
 echo "Fine-tuning dir: $FINE_TUNING_DIR"
