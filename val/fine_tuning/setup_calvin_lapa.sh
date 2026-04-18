@@ -139,6 +139,7 @@ fi
 # Install LAPA requirements
 if [ -f "$LAPA_ROOT/requirements.txt" ]; then
     echo "Installing LAPA requirements..."
+    pip install --break-system-packages transformers==4.29.2 tokenizers datasets 2>/dev/null || true
     pip install --break-system-packages -r "$LAPA_ROOT/requirements.txt" 2>/dev/null || true
 fi
 
