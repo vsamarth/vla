@@ -124,12 +124,13 @@ echo ""
 echo "Step 4: Installing Python dependencies..."
 
 # Install all dependencies with latest versions
+# scipy 1.17+ breaks JAX, so pin to 1.16
 pip install --break-system-packages \
     numpy \
     Pillow \
     albumentations \
     pandas \
-    scipy \
+    'scipy>=1.14,<1.17' \
     transformers \
     datasets \
     tokenizers \
