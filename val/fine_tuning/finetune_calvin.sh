@@ -4,8 +4,6 @@ set -e
 # ============================================
 # Fine-tune LAPA on CALVIN Dataset
 # ============================================
-# Run after setup_calvin_lapa.sh has completed
-# ============================================
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 REPO_DIR="$( cd -- "$( dirname -- "$SCRIPT_DIR/../.." )" &> /dev/null && pwd )"
@@ -24,8 +22,10 @@ echo "============================================"
 # Activate virtual environment
 source "$VENV_DIR/bin/activate"
 
+# Set CUDA library path for cuDNN
+export LD_LIBRARY_PATH=/usr/local/lib/python3.11/dist-packages/nvidia/cudnn/lib:$LD_LIBRARY_PATH
+
 export PYTHONPATH="$PYTHONPATH:$REPO_DIR:$LAPA_DIR"
-export LIBTPU_INIT_ARGS="--xla_tpu_megacore_fusion_allow_ags=false --xla_enable_async_collective_permute=true --xla_tpu_enable_ag_backward_pipelining=true --xla_tpu_enable_data_parallel_all_reduce_opt=true --xla_tpu_data_parallel_opt_different_sized_ops=true --xla_tpu_enable_async_collective_fusion=true --xla_tpu_enable_async_collective_fusion_multiple_steps=true --xla_tpu_overlap_compute_collective_tc=true --xla_enable_async_all_gather=true"
 
 # Paths
 export absolute_path="$REPO_DIR"
@@ -34,16 +34,14 @@ export output_dir="$REPO_DIR/outputs/calvin_finetune"
 
 export project_id='lapa-calvin'
 export experiment_note='fine-tune on calvin dataset'
-
 export dataset_path="$SCRIPT_DIR/data/calvin_train.jsonl"
 
 echo "Dataset: $dataset_path"
 echo "Output: $output_dir"
 
-# Quick test with small steps first
 python -u -m latent_pretraining.train \
     --modality='vision,action,delta' \
-    --mesh_dim='!-1,4,1,1' \
+    --mesh_dim='1,1,1,1' \
     --dtype='bf16' \
     --total_steps=100 \
     --log_freq=1 \
