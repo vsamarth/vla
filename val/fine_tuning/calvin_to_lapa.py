@@ -41,6 +41,7 @@ class CalvinToLAPAConverter:
         calvin_root: str,
         lapa_root: str,
         output_dir: str,
+        dataset_folder: str = "task_ABC_D",
         discretization_bins: int = 256,
     ):
         """
@@ -48,11 +49,13 @@ class CalvinToLAPAConverter:
             calvin_root: Path to CALVIN repository
             lapa_root: Path to LAPA repository
             output_dir: Where to save converted data
+            dataset_folder: Folder name of the CALVIN dataset (e.g., "task_ABC_D", "calvin_debug_dataset")
             discretization_bins: Number of bins for action discretization
         """
         self.calvin_root = Path(calvin_root)
         self.lapa_root = Path(lapa_root)
         self.output_dir = Path(output_dir)
+        self.dataset_folder = dataset_folder
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         self.discretization_bins = discretization_bins
@@ -92,24 +95,26 @@ class CalvinToLAPAConverter:
         # Action bins (fitted during conversion)
         self.action_bins = None
 
-    def download_debug_dataset(self):
-        """Download the CALVIN debug dataset if not present."""
+    def download_dataset(self):
+        """Download the CALVIN dataset if not present."""
         dataset_dir = self.calvin_root / "dataset"
 
-        if (dataset_dir / "calvin_debug_dataset" / "training").exists():
-            print("Debug dataset already exists, skipping download.")
+        if (dataset_dir / self.dataset_folder / "training").exists():
+            print(f"{self.dataset_folder} already exists, skipping download.")
             return
 
-        zip_path = dataset_dir / "calvin_debug_dataset.zip"
+        zip_path = dataset_dir / f"{self.dataset_folder}.zip"
 
         if not zip_path.exists():
-            print("Downloading CALVIN debug dataset...")
+            print(f"Downloading CALVIN {self.dataset_folder} dataset...")
+            # ABC uses task_ABC_D.zip
+            zip_name = f"{self.dataset_folder}.zip" if self.dataset_folder == "task_ABC_D" else self.dataset_folder + ".zip"
             subprocess.run(
                 [
                     "wget",
                     "-q",
                     "--show-progress",
-                    "http://calvin.cs.uni-freiburg.de/dataset/calvin_debug_dataset.zip",
+                    f"http://calvin.cs.uni-freiburg.de/dataset/{zip_name}",
                 ],
                 cwd=dataset_dir,
                 check=True,
@@ -117,7 +122,7 @@ class CalvinToLAPAConverter:
 
         print("Unzipping...")
         subprocess.run(
-            ["unzip", "-q", "calvin_debug_dataset.zip"], cwd=dataset_dir, check=True
+            ["unzip", "-q", f"{self.dataset_folder}.zip"], cwd=dataset_dir, check=True
         )
 
         # Clean up
@@ -128,7 +133,7 @@ class CalvinToLAPAConverter:
 
     def load_episodes(self, split: str = "training") -> List[Dict]:
         """Load all episodes from a split."""
-        dataset_dir = self.calvin_root / "dataset" / "calvin_debug_dataset"
+        dataset_dir = self.calvin_root / "dataset" / self.dataset_folder
         split_dir = dataset_dir / split
 
         episodes = []
@@ -141,7 +146,7 @@ class CalvinToLAPAConverter:
 
     def load_language_annotations(self, split: str = "training") -> Dict:
         """Load language annotations for a split."""
-        dataset_dir = self.calvin_root / "dataset" / "calvin_debug_dataset"
+        dataset_dir = self.calvin_root / "dataset" / self.dataset_folder
         lang_dir = split_dir = dataset_dir / split / "lang_annotations"
 
         ann_path = lang_dir / "auto_lang_ann.npy"
@@ -427,6 +432,12 @@ def main():
     parser.add_argument(
         "--verify", action="store_true", help="Only verify existing output"
     )
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        default="task_ABC_D",
+        help="CALVIN dataset folder name (default: task_ABC_D)",
+    )
     args = parser.parse_args()
 
     if args.output_dir is None:
@@ -436,14 +447,14 @@ def main():
         calvin_root=args.calvin_root,
         lapa_root=args.lapa_root,
         output_dir=args.output_dir,
+        dataset_folder=args.dataset,
         discretization_bins=args.discretization_bins,
     )
 
     if args.verify:
         converter.verify_output()
     else:
-        # Download if needed
-        converter.download_debug_dataset()
+        converter.download_dataset()
 
         # Convert both splits
         converter.convert_split("training")

@@ -53,30 +53,30 @@ echo "CALVIN root: $CALVIN_ROOT"
 echo "LAPA root: $LAPA_ROOT"
 
 # ============================================
-# Step 2: Download CALVIN Debug Dataset
+# Step 2: Download CALVIN ABC Dataset
 # ============================================
 echo ""
-echo "Step 2: Downloading CALVIN debug dataset..."
+echo "Step 2: Downloading CALVIN ABC dataset..."
 
 cd "$CALVIN_ROOT/dataset"
 
 # Check if already downloaded
-if [ -d "calvin_debug_dataset" ]; then
-    echo "Debug dataset already exists, skipping download."
+if [ -d "task_ABC_D" ]; then
+    echo "ABC dataset already exists, skipping download."
 else
-    echo "Downloading debug dataset (1.3 GB)..."
-    wget -q --show-progress http://calvin.cs.uni-freiburg.de/dataset/calvin_debug_dataset.zip
-    
+    echo "Downloading ABC dataset (517 GB)..."
+    wget -q --show-progress http://calvin.cs.uni-freiburg.de/dataset/task_ABC_D.zip
+
     echo "Unzipping..."
-    unzip -q calvin_debug_dataset.zip
-    
+    unzip -q task_ABC_D.zip
+
     # Clean up zip
-    rm calvin_debug_dataset.zip
+    rm task_ABC_D.zip
     echo "Download and extraction complete."
 fi
 
 # Verify structure
-if [ ! -d "calvin_debug_dataset/training" ] || [ ! -d "calvin_debug_dataset/validation" ]; then
+if [ ! -d "task_ABC_D/training" ] || [ ! -d "task_ABC_D/validation" ]; then
     echo "ERROR: Expected training/validation folders not found"
     exit 1
 fi
@@ -144,7 +144,7 @@ uv venv "$VENV_DIR"
 
 # Install deps with uv sync
 echo "Installing dependencies with uv sync..."
-uv sync --python "$VENV_DIR/bin/python"
+uv sync
 
 echo "Python environment ready."
 
@@ -198,7 +198,8 @@ from calvin_to_lapa import CalvinToLAPAConverter
 converter = CalvinToLAPAConverter(
     calvin_root='$CALVIN_ROOT',
     lapa_root='$LAPA_ROOT',
-    output_dir='$FINE_TUNING_DIR/data'
+    output_dir='$FINE_TUNING_DIR/data',
+    dataset_folder='task_ABC_D'
 )
 
 # Convert training data
