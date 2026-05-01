@@ -29,10 +29,25 @@ Launches the fine-tuning process on the processed dataset.
 - Points to the generated `.jsonl` files and action bins.
 - Handles model loading and training loops.
 
+### 4. `extract_hidden_states.py` (in `LAPA/scripts/`)
+Used for advanced feature extraction from the frozen LAPA transformer.
+- **Hidden States**: Extracts vectors for single positions, autoregressive action tokens, and all 32 transformer layers.
+- **Vision Pooling**: Generates mean-pooled features from vision tokens.
+- **Output**: Produces `.npy` files and metadata for probing or analysis.
+
+**Usage:**
+```bash
+python ../../LAPA/scripts/extract_hidden_states.py \
+    --input_jsonl data/calvin_train.jsonl \
+    --checkpoint_path path/to/lapa_checkpoint \
+    --output_dir ./features
+```
+
 ## Data Pipeline
 1. **Setup**: Run `bash setup_calvin_lapa.sh`.
 2. **Process**: Run `python calvin_to_lapa.py` to generate the training features.
-3. **Fine-tune**: Run `bash finetune_calvin.sh`.
+3. **Analyze (Optional)**: Use `extract_hidden_states.py` to extract transformer representations.
+4. **Fine-tune**: Run `bash finetune_calvin.sh`.
 
 ## Requirements
 - Python 3.10+
